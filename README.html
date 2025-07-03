@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate OTT Collection</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS for dark theme, scrollbars, and specific effects */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar for horizontal movie lists */
+        .scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: #2d3748; /* Darker track */
+            border-radius: 10px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: #4a5568; /* Scrollbar thumb */
+            border-radius: 10px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* Hover color */
+        }
+
+        /* Sticky navbar glow effect */
+        .navbar-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(8px); /* Frosted glass effect */
+            background-color: rgba(26, 32, 44, 0.8); /* Semi-transparent dark background */
+        }
+
+        .navbar-link:hover {
+            text-shadow: 0 0 8px #63b3ed, 0 0 15px #63b3ed; /* Blue glow effect */
+        }
+
+        /* Movie card hover effect */
+        .movie-card-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem; /* rounded-xl */
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .movie-card-wrapper:hover {
+            transform: translateY(-8px) scale(1.05); /* Lift and zoom */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow */
+        }
+
+        .movie-card-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
+            color: white;
+            padding: 1rem;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+            opacity: 0;
+            visibility: hidden;
+            height: 100%; /* Cover the entire card */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Align content to bottom */
+            border-radius: 0.75rem;
+        }
+
+        .movie-card-wrapper:hover .movie-card-overlay {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .movie-card-overlay p {
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.25rem;
+            margin-bottom: 0.5rem;
+            max-height: 80%; /* Limit height to prevent overflow for long descriptions */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 5; /* Show up to 5 lines of description */
+            -webkit-box-orient: vertical;
+        }
+
+        /* Autocomplete suggestions styling */
+        #autocomplete-suggestions {
+            position: absolute;
+            background-color: #2d3748; /* Darker background */
+            border: 1px solid #4a5568; /* Border color */
+            border-radius: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            width: calc(100% - 2rem); /* Match search bar width, considering padding */
+            left: 1rem;
+            right: 1rem;
+            z-index: 100;
+            margin-top: 0.25rem;
+        }
+
+        #autocomplete-suggestions div {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #4a5568;
+        }
+
+        #autocomplete-suggestions div:last-child {
+            border-bottom: none;
+        }
+
+        #autocomplete-suggestions div:hover {
+            background-color: #4a5568; /* Hover background */
+        }
+
+        /* Responsive adjustments for filter section */
+        @media (max-width: 768px) {
+            .filter-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .filter-section > div {
+                width: 100%;
+                margin-bottom: 0.75rem;
+            }
+            .filter-section > div:last-child {
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <!-- Sticky Navbar -->
+    <nav class="navbar-sticky p-4 shadow-lg">
+        <div class="container mx-auto flex flex-col md:flex-row items-center justify-between relative">
+            <a href="#" class="text-3xl font-bold text-blue-400 hover:text-blue-300 transition duration-300 navbar-link mb-4 md:mb-0">
+                🎬 OTTVerse
+            </a>
+            <div class="relative w-full md:w-1/2 lg:w-1/3">
+                <input type="text" id="search-input" placeholder="Search movies or web series..."
+                       class="w-full p-3 pl-10 rounded-full bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <div id="autocomplete-suggestions" class="hidden"></div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-8">
+        <!-- Random Pick of the Day -->
+        <section class="mb-12 bg-gray-800 p-6 rounded-xl shadow-lg">
+            <h2 class="text-3xl font-bold text-blue-300 mb-6 text-center">✨ Random Pick of the Day ✨</h2>
+            <div id="random-pick-container" class="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
+                <!-- Content will be dynamically loaded here -->
+                <div class="w-full md:w-1/3 flex justify-center">
+                    <img id="random-pick-thumbnail" src="https://placehold.co/300x450/333333/666666?text=Loading..." alt="Random Pick Thumbnail" class="rounded-lg shadow-xl w-48 md:w-full max-w-xs object-cover">
+                </div>
+                <div class="w-full md:w-2/3 text-center md:text-left">
+                    <h3 id="random-pick-title" class="text-4xl font-extrabold text-white mb-2">Loading...</h3>
+                    <p class="text-lg text-gray-400 mb-4">
+                        <span id="random-pick-genre"></span> |
+                        <span id="random-pick-year"></span> |
+                        <span id="random-pick-rating" class="font-semibold text-yellow-400"></span> ⭐
+                    </p>
+                    <p id="random-pick-platform" class="text-xl font-medium text-purple-300 mb-4"></p>
+                    <p id="random-pick-description" class="text-gray-300 leading-relaxed text-base md:text-lg"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="mb-12 bg-gray-800 p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-blue-300 mb-4">🔍 Filters</h2>
+            <div class="filter-section flex flex-wrap gap-4 justify-between items-center">
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filter-year" class="block text-gray-400 text-sm font-medium mb-1">Year</label>
+                    <select id="filter-year" class="w-full p-2 rounded-md bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">All Years</option>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filter-language" class="block text-gray-400 text-sm font-medium mb-1">Language</label>
+                    <select id="filter-language" class="w-full p-2 rounded-md bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">All Languages</option>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filter-country" class="block text-gray-400 text-sm font-medium mb-1">Country</label>
+                    <select id="filter-country" class="w-full p-2 rounded-md bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">All Countries</option>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label for="filter-platform" class="block text-gray-400 text-sm font-medium mb-1">Platform</label>
+                    <select id="filter-platform" class="w-full p-2 rounded-md bg-gray-700 text-gray-100 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">All Platforms</option>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic Category Sections -->
+        <div id="categories-container">
+            <!-- Categories will be dynamically loaded here by JS -->
+        </div>
+    </main>
+
+    <footer class="bg-gray-900 text-gray-500 p-6 text-center text-sm border-t border-gray-700 mt-12">
+        <p>&copy; 2025 OTTVerse. All rights reserved. | Built with ❤️ and JavaScript.</p>
+    </footer>
+
+    <script>
+        // Dummy data for movies and web series
+        const moviesData = [
+            {
+                id: 'm1', title: 'Inception', genre: 'Sci-fi, Thriller', rating: 8.8, year: 2010, platform: 'Netflix', type: 'movie', status: 'Cult Classic', language: 'English', country: 'USA',
+                description: 'A thief who steals corporate secrets through use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Inception'
+            },
+            {
+                id: 'm2', title: 'The Dark Knight', genre: 'Action, Crime, Drama', rating: 9.0, year: 2008, platform: 'Amazon Prime Video', type: 'movie', status: 'Superhit', language: 'English', country: 'USA',
+                description: 'When the menace known as The Joker emerges from his mysterious past, he wreaks havoc and chaos on the people of Gotham.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Dark+Knight'
+            },
+            {
+                id: 'm3', title: 'Stranger Things', genre: 'Sci-fi, Horror, Drama', rating: 8.7, year: 2016, platform: 'Netflix', type: 'web series', status: 'Trending', language: 'English', country: 'USA',
+                description: 'When a young boy vanishes, his mother, a police chief, and his friends must confront terrifying supernatural forces in order to get him back.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Stranger+Things'
+            },
+            {
+                id: 'm4', title: 'Pulp Fiction', genre: 'Crime, Drama', rating: 8.9, year: 1994, platform: 'Netflix', type: 'movie', status: 'Cult Classic', language: 'English', country: 'USA',
+                description: 'The lives of two mob hitmen, a boxer, a gangster\'s wife, and a pair of diner bandits intertwine in four tales of violence and redemption.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Pulp+Fiction'
+            },
+            {
+                id: 'm5', title: 'The Office (US)', genre: 'Comedy', rating: 9.0, year: 2005, platform: 'JioCinema', type: 'web series', status: 'Underrated', language: 'English', country: 'USA',
+                description: 'A mockumentary on the everyday lives of a group of office employees in the Scranton, Pennsylvania, branch of the fictional Dunder Mifflin Paper Company.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=The+Office'
+            },
+            {
+                id: 'm6', title: 'Spider-Man: Into the Spider-Verse', genre: 'Superhero, Animation', rating: 8.4, year: 2018, platform: 'Disney+ Hotstar', type: 'movie', status: 'Superhit', language: 'English', country: 'USA',
+                description: 'Teen Miles Morales becomes Spider-Man of his reality, crossing paths with five counterparts from other dimensions to stop a threat to all realities.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Spider-Verse'
+            },
+            {
+                id: 'm7', title: 'The Queen\'s Gambit', genre: 'Drama', rating: 8.6, year: 2020, platform: 'Netflix', type: 'web series', status: 'Hit', language: 'English', country: 'USA',
+                description: 'Orphaned at the age of nine, prodigious chess prodigy Beth Harmon struggles with addiction in a quest to become the greatest chess player in the world.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Queens+Gambit'
+            },
+            {
+                id: 'm8', title: 'Parasite', genre: 'Thriller, Drama', rating: 8.5, year: 2019, platform: 'Amazon Prime Video', type: 'movie', status: 'Superhit', language: 'Korean', country: 'South Korea',
+                description: 'Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim family.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Parasite'
+            },
+            {
+                id: 'm9', title: 'Sacred Games', genre: 'Crime, Thriller', rating: 8.5, year: 2018, platform: 'Netflix', type: 'web series', status: 'Hit', language: 'Hindi', country: 'India',
+                description: 'A link in a conspiracy behind India\'s future, a cop must race against time to save the city from an impending attack.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Sacred+Games'
+            },
+            {
+                id: 'm10', title: 'Mirzapur', genre: 'Action, Crime, Drama', rating: 8.5, year: 2018, platform: 'Amazon Prime Video', type: 'web series', status: 'Superhit', language: 'Hindi', country: 'India',
+                description: 'A shocking incident at a wedding procession ignites a series of events entangling the lives of two families in the lawless city of Mirzapur.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Mirzapur'
+            },
+            {
+                id: 'm11', title: 'The Family Man', genre: 'Action, Thriller', rating: 8.6, year: 2019, platform: 'Amazon Prime Video', type: 'web series', status: 'Hit', language: 'Hindi', country: 'India',
+                description: 'A middle-class man secretly works as an intelligence officer for the Threat Analysis and Surveillance Cell (TASC), a branch of the National Investigation Agency.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Family+Man'
+            },
+            {
+                id: 'm12', title: 'Upcoming Marvel Movie', genre: 'Superhero, Action', rating: 'N/A', year: 2026, platform: 'Disney+ Hotstar', type: 'movie', status: 'Upcoming', language: 'English', country: 'USA',
+                description: 'The next big superhero blockbuster from the Marvel Cinematic Universe.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Upcoming+Marvel'
+            },
+            {
+                id: 'm13', title: 'Trending Comedy Show', genre: 'Comedy', rating: 7.9, year: 2024, platform: 'Netflix', type: 'web series', status: 'Trending', language: 'English', country: 'USA',
+                description: 'A hilarious new comedy series that is taking the world by storm.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Trending+Comedy'
+            },
+            {
+                id: 'm14', title: 'Flop Action Film', genre: 'Action', rating: 4.5, year: 2023, platform: 'JioCinema', type: 'movie', status: 'Flop', language: 'Hindi', country: 'India',
+                description: 'An action film that failed to impress critics and audiences alike.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Flop+Action'
+            },
+            {
+                id: 'm15', title: 'Underrated Indie Gem', genre: 'Drama', rating: 7.2, year: 2022, platform: 'Apple TV+', type: 'movie', status: 'Underrated', language: 'English', country: 'USA',
+                description: 'A critically acclaimed independent film that deserves more recognition.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Underrated+Indie'
+            },
+            {
+                id: 'm16', title: 'The Witcher', genre: 'Fantasy, Action', rating: 8.2, year: 2019, platform: 'Netflix', type: 'web series', status: 'Hit', language: 'English', country: 'USA',
+                description: 'Geralt of Rivia, a mutated monster-hunter for hire, journeys toward his destiny in a turbulent world where humans are often more wicked than beasts.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=The+Witcher'
+            },
+            {
+                id: 'm17', title: 'Money Heist', genre: 'Crime, Thriller', rating: 8.2, year: 2017, platform: 'Netflix', type: 'web series', status: 'Superhit', language: 'Spanish', country: 'Spain',
+                description: 'An unusual group of robbers attempt to carry out the most perfect robbery in Spanish history - stealing 2.4 billion euros from the Royal Mint of Spain.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Money+Heist'
+            },
+            {
+                id: 'm18', title: 'Panchayat', genre: 'Comedy, Drama', rating: 8.9, year: 2020, platform: 'Amazon Prime Video', type: 'web series', status: 'Hit', language: 'Hindi', country: 'India',
+                description: 'A city-bred engineering graduate takes up a job as a Panchayat secretary in a remote village.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Panchayat'
+            },
+            {
+                id: 'm19', title: 'Scam 1992: The Harshad Mehta Story', genre: 'Biography, Drama', rating: 9.3, year: 2020, platform: 'SonyLIV', type: 'web series', status: 'Cult Classic', language: 'Hindi', country: 'India',
+                description: 'Set in 1980s and 90s Bombay, it follows the life of Harshad Mehta, a stockbroker who single-handedly took the stock market to dizzying heights.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Scam+1992'
+            },
+            {
+                id: 'm20', title: 'Ted Lasso', genre: 'Comedy, Sport', rating: 8.8, year: 2020, platform: 'Apple TV+', type: 'web series', status: 'Hit', language: 'English', country: 'USA',
+                description: 'American football coach Ted Lasso is hired to manage a British soccer team, despite having no experience.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Ted+Lasso'
+            },
+            {
+                id: 'm21', title: 'Pataal Lok', genre: 'Crime, Thriller', rating: 7.8, year: 2020, platform: 'Amazon Prime Video', type: 'web series', status: 'Hit', language: 'Hindi', country: 'India',
+                description: 'A cynical inspector is tasked with a high-profile case. He is drawn into the dark netherworld of the Indian criminal justice system.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Pataal+Lok'
+            },
+            {
+                id: 'm22', title: 'Pistol', genre: 'Documentary, Music', rating: 7.6, year: 2022, platform: 'Disney+ Hotstar', type: 'web series', status: 'Underrated', language: 'English', country: 'UK',
+                description: 'The story of a rock and roll revolution: the Sex Pistols.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Pistol'
+            },
+            {
+                id: 'm23', title: 'Pihu', genre: 'Thriller, Drama', rating: 6.8, year: 2018, platform: 'Netflix', type: 'movie', status: 'Underrated', language: 'Hindi', country: 'India',
+                description: 'A 2-year-old girl is left alone in an apartment after her mother unexpectedly passes away.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Pihu'
+            },
+            {
+                id: 'm24', title: 'Extraction', genre: 'Action, Thriller', rating: 6.7, year: 2020, platform: 'Netflix', type: 'movie', status: 'Hit', language: 'English', country: 'USA',
+                description: 'A black-market mercenary has no choice but to rescue the kidnapped son of a crime lord.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Extraction'
+            },
+            {
+                id: 'm25', title: 'Dune', genre: 'Sci-fi, Adventure', rating: 8.0, year: 2021, platform: 'HBO Max', type: 'movie', status: 'Superhit', language: 'English', country: 'USA',
+                description: 'A gifted young man must travel to the most dangerous planet in the universe to ensure the future of his family and his people.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Dune'
+            },
+            {
+                id: 'm26', title: 'The Boys', genre: 'Superhero, Action', rating: 8.7, year: 2019, platform: 'Amazon Prime Video', type: 'web series', status: 'Trending', language: 'English', country: 'USA',
+                description: 'A group of vigilantes known as "The Boys" set out to take down corrupt superheroes who abuse their superpowers.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=The+Boys'
+            },
+            {
+                id: 'm27', title: 'Squid Game', genre: 'Thriller, Drama', rating: 8.0, year: 2021, platform: 'Netflix', type: 'web series', status: 'Superhit', language: 'Korean', country: 'South Korea',
+                description: 'Hundreds of cash-strapped players accept a strange invitation to compete in children\'s games. Inside, a tempting prize awaits with deadly high stakes.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Squid+Game'
+            },
+            {
+                id: 'm28', title: 'Kota Factory', genre: 'Comedy, Drama', rating: 9.1, year: 2019, platform: 'Netflix', type: 'web series', status: 'Cult Classic', language: 'Hindi', country: 'India',
+                description: 'Set in Kota, Rajasthan, a hub for many coaching centers, the series follows the lives of students preparing for competitive exams.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Kota+Factory'
+            },
+            {
+                id: 'm29', title: 'Loki', genre: 'Superhero, Sci-fi', rating: 8.2, year: 2021, platform: 'Disney+ Hotstar', type: 'web series', status: 'Hit', language: 'English', country: 'USA',
+                description: 'The mercurial villain Loki resumes his role as the God of Mischief in a new series that takes place after the events of "Avengers: Endgame".',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Loki'
+            },
+            {
+                id: 'm30', title: 'Rocket Boys', genre: 'Biography, Drama', rating: 8.8, year: 2022, platform: 'SonyLIV', type: 'web series', status: 'Hit', language: 'Hindi', country: 'India',
+                description: 'A tribute to the legends of India\'s space program, Homi J. Bhabha and Vikram Sarabhai.',
+                thumbnail: 'https://placehold.co/300x450/000000/FFFFFF?text=Rocket+Boys'
+            }
+        ];
+
+        // Define categories for display
+        const categories = [
+            { id: 'trending', title: '🔥 Trending Now' },
+            { id: 'superhit', title: '🌟 Superhit Collection' },
+            { id: 'hit', title: '👍 Hit Movies & Series' },
+            { id: 'cult-classic', title: '💎 Cult Classics' },
+            { id: 'underrated', title: '💡 Underrated Gems' },
+            { id: 'upcoming', title: '🗓️ Upcoming Releases' },
+            { id: 'sci-fi', title: '🚀 Sci-fi Adventures' },
+            { id: 'superhero', title: '🦸‍♂️ Superhero Sagas' },
+            { id: 'thriller', title: '🔪 Thrilling Suspense' },
+            { id: 'romance', title: '❤️ Romantic Tales' },
+            { id: 'action', title: '💥 Action Packed' },
+            { id: 'comedy', title: '😂 Laugh Out Loud' },
+            { id: 'horror', title: '👻 Spine-Chilling Horror' },
+            { id: 'documentary', title: '🎥 Insightful Documentaries' },
+            { id: 'netflix', title: '🔴 Netflix Originals' },
+            { id: 'amazon-prime', title: '🟡 Amazon Prime Video' },
+            { id: 'disney-hotstar', title: '🔵 Disney+ Hotstar' },
+            { id: 'jiocinema', title: '🟢 JioCinema' },
+            { id: 'apple-tv', title: '⚪ Apple TV+' },
+            { id: 'mx-player', title: '🟠 MX Player' },
+            { id: 'sonyliv', title: '🟣 SonyLIV' },
+            { id: 'hulu', title: '⚫ Hulu' },
+            { id: 'hbo-max', title: '⚫ HBO Max' },
+        ];
+
+        // Function to get OTT logo/text based on platform
+        function getOttLogo(platform) {
+            const logos = {
+                'Netflix': '<span class="text-red-500 font-bold">N</span>',
+                'Amazon Prime Video': '<span class="text-blue-500 font-bold">P</span>',
+                'Disney+ Hotstar': '<span class="text-purple-500 font-bold">D+H</span>',
+                'JioCinema': '<span class="text-green-500 font-bold">Jio</span>',
+                'Apple TV+': '<span class="text-gray-400 font-bold">TV+</span>',
+                'MX Player': '<span class="text-yellow-500 font-bold">MX</span>',
+                'SonyLIV': '<span class="text-indigo-500 font-bold">LIV</span>',
+                'Hulu': '<span class="text-green-600 font-bold">Hulu</span>',
+                'HBO Max': '<span class="text-purple-600 font-bold">HBO</span>',
+            };
+            return logos[platform] || platform; // Fallback to platform name if no specific logo
+        }
+
+        // Function to create a movie card HTML element
+        function createMovieCard(movie) {
+            const cardWrapper = document.createElement('div');
+            cardWrapper.className = 'movie-card-wrapper flex-none w-48 md:w-56 lg:w-64 bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out cursor-pointer overflow-hidden';
+
+            cardWrapper.innerHTML = `
+                <img src="${movie.thumbnail}" alt="${movie.title}" class="w-full h-64 object-cover rounded-t-xl">
+                <div class="p-4 relative">
+                    <h3 class="text-lg font-semibold text-white truncate">${movie.title}</h3>
+                    <p class="text-sm text-gray-400">${movie.genre}</p>
+                    <div class="flex items-center justify-between mt-2 text-sm">
+                        <span class="text-yellow-400 font-medium">${movie.rating} ⭐</span>
+                        <span class="text-gray-400">${movie.year}</span>
+                    </div>
+                    <div class="mt-2 text-sm text-gray-300 flex items-center">
+                        <span class="mr-1">Platform:</span> ${getOttLogo(movie.platform)}
+                    </div>
+                    <div class="movie-card-overlay">
+                        <h4 class="text-xl font-bold mb-2">${movie.title}</h4>
+                        <p class="text-sm text-gray-300 mb-2">${movie.description}</p>
+                        <div class="flex flex-wrap gap-2 text-xs text-gray-400">
+                            <span>${movie.genre}</span>
+                            <span>| ${movie.year}</span>
+                            <span>| ${movie.language}</span>
+                            <span>| ${movie.country}</span>
+                            <span class="text-yellow-400">${movie.rating} ⭐</span>
+                            <span>${getOttLogo(movie.platform)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return cardWrapper;
+        }
+
+        // Function to render categories and their movies
+        function renderCategories(filteredMovies = moviesData) {
+            const categoriesContainer = document.getElementById('categories-container');
+            categoriesContainer.innerHTML = ''; // Clear previous content
+
+            categories.forEach(category => {
+                let moviesForCategory = [];
+
+                // Filter movies based on category type
+                if (['hit', 'flop', 'superhit', 'underrated', 'cult-classic', 'upcoming', 'trending'].includes(category.id)) {
+                    moviesForCategory = filteredMovies.filter(movie => movie.status && movie.status.toLowerCase().replace(/\s+/g, '-') === category.id);
+                } else if (['sci-fi', 'superhero', 'thriller', 'romance', 'action', 'comedy', 'horror', 'documentary'].includes(category.id)) {
+                    moviesForCategory = filteredMovies.filter(movie => movie.genre.toLowerCase().includes(category.id));
+                } else if (['netflix', 'amazon-prime', 'disney-hotstar', 'jiocinema', 'apple-tv', 'mx-player', 'sonyliv', 'hulu', 'hbo-max'].includes(category.id)) {
+                    moviesForCategory = filteredMovies.filter(movie => movie.platform.toLowerCase().replace(/\s+/g, '-') === category.id);
+                }
+
+                if (moviesForCategory.length > 0) {
+                    const section = document.createElement('section');
+                    section.className = 'mb-12';
+                    section.innerHTML = `
+                        <h2 class="text-2xl font-bold text-blue-300 mb-6">${category.title}</h2>
+                        <div class="scroll-container flex space-x-4 pb-4 overflow-x-auto">
+                            <!-- Movie cards will go here -->
+                        </div>
+                    `;
+                    const scrollContainer = section.querySelector('.scroll-container');
+                    moviesForCategory.forEach(movie => {
+                        scrollContainer.appendChild(createMovieCard(movie));
+                    });
+                    categoriesContainer.appendChild(section);
+                }
+            });
+        }
+
+        // Function to display a random pick of the day
+        function displayRandomPick() {
+            const randomIndex = Math.floor(Math.random() * moviesData.length);
+            const randomMovie = moviesData[randomIndex];
+
+            document.getElementById('random-pick-thumbnail').src = randomMovie.thumbnail;
+            document.getElementById('random-pick-thumbnail').alt = randomMovie.title;
+            document.getElementById('random-pick-title').textContent = randomMovie.title;
+            document.getElementById('random-pick-genre').textContent = randomMovie.genre;
+            document.getElementById('random-pick-year').textContent = randomMovie.year;
+            document.getElementById('random-pick-rating').textContent = randomMovie.rating;
+            document.getElementById('random-pick-platform').innerHTML = `Available on: ${getOttLogo(randomMovie.platform)}`;
+            document.getElementById('random-pick-description').textContent = randomMovie.description;
+        }
+
+        // Populate filter options
+        function populateFilters() {
+            const years = [...new Set(moviesData.map(movie => movie.year))].sort((a, b) => b - a);
+            const languages = [...new Set(moviesData.map(movie => movie.language))].sort();
+            const countries = [...new Set(moviesData.map(movie => movie.country))].sort();
+            const platforms = [...new Set(moviesData.map(movie => movie.platform))].sort();
+
+            const yearFilter = document.getElementById('filter-year');
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+
+            const languageFilter = document.getElementById('filter-language');
+            languages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = lang;
+                languageFilter.appendChild(option);
+            });
+
+            const countryFilter = document.getElementById('filter-country');
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countryFilter.appendChild(option);
+            });
+
+            const platformFilter = document.getElementById('filter-platform');
+            platforms.forEach(platform => {
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = platform;
+                platformFilter.appendChild(option);
+            });
+        }
+
+        // Apply filters and re-render categories
+        function applyFilters() {
+            const selectedYear = document.getElementById('filter-year').value;
+            const selectedLanguage = document.getElementById('filter-language').value;
+            const selectedCountry = document.getElementById('filter-country').value;
+            const selectedPlatform = document.getElementById('filter-platform').value;
+
+            let filtered = moviesData.filter(movie => {
+                const matchYear = selectedYear === 'all' || movie.year == selectedYear;
+                const matchLanguage = selectedLanguage === 'all' || movie.language === selectedLanguage;
+                const matchCountry = selectedCountry === 'all' || movie.country === selectedCountry;
+                const matchPlatform = selectedPlatform === 'all' || movie.platform === selectedPlatform;
+                return matchYear && matchLanguage && matchCountry && matchPlatform;
+            });
+            renderCategories(filtered);
+        }
+
+        // Search functionality with autocomplete
+        const searchInput = document.getElementById('search-input');
+        const autocompleteSuggestions = document.getElementById('autocomplete-suggestions');
+        let debounceTimeout;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                const query = searchInput.value.toLowerCase().trim();
+                autocompleteSuggestions.innerHTML = '';
+                if (query.length === 0) {
+                    autocompleteSuggestions.classList.add('hidden');
+                    renderCategories(moviesData); // Show all categories when search is empty
+                    return;
+                }
+
+                const suggestions = moviesData.filter(movie =>
+                    movie.title.toLowerCase().includes(query) ||
+                    movie.genre.toLowerCase().includes(query)
+                ).slice(0, 8); // Limit suggestions to 8
+
+                if (suggestions.length > 0) {
+                    suggestions.forEach(movie => {
+                        const div = document.createElement('div');
+                        div.textContent = movie.title;
+                        div.addEventListener('click', () => {
+                            searchInput.value = movie.title;
+                            autocompleteSuggestions.classList.add('hidden');
+                            renderCategories([movie]); // Show only the selected movie's category
+                        });
+                        autocompleteSuggestions.appendChild(div);
+                    });
+                    autocompleteSuggestions.classList.remove('hidden');
+                } else {
+                    autocompleteSuggestions.classList.add('hidden');
+                    renderCategories([]); // Show no categories if no search results
+                }
+            }, 300); // Debounce for 300ms
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!searchInput.contains(event.target) && !autocompleteSuggestions.contains(event.target)) {
+                autocompleteSuggestions.classList.add('hidden');
+            }
+        });
+
+        // Event listeners for filters
+        document.getElementById('filter-year').addEventListener('change', applyFilters);
+        document.getElementById('filter-language').addEventListener('change', applyFilters);
+        document.getElementById('filter-country').addEventListener('change', applyFilters);
+        document.getElementById('filter-platform').addEventListener('change', applyFilters);
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            displayRandomPick();
+            populateFilters();
+            renderCategories(); // Render all categories initially
+        });
+    </script>
+</body>
+</html>
